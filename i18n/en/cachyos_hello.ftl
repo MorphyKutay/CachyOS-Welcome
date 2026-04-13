@@ -14,6 +14,10 @@ gaming-package-installed = Gaming packages already installed!
 winboat-package-installed = Winboat packages already installed!
 gpu-boosters-package-installed = GPU booster packages already installed!
 
+# Tweaks page — quick launch (CachyOS apps)
+app-cachyos-pi-label = CachyOS Package Installer
+app-cachyos-kernel-manager-label = CachyOS Kernel Manager
+
 # Application Browser page
 advanced-btn = advanced
 reset-btn = reset

@@ -189,6 +189,19 @@ fn create_fixes_section(builder: &Builder) -> gtk::Box {
     topbox
 }
 
+fn spawn_cachyos_app(bin: &'static str) {
+    std::thread::spawn(move || {
+        let Ok(exec_path) = which(bin) else {
+            return;
+        };
+        let Some(exec_path) = exec_path.to_str() else {
+            return;
+        };
+        let exit_status = utils::spawn_detached(exec_path).expect("Failed to spawn process");
+        debug!("Exit status successfully? = {:?}", exit_status.success());
+    });
+}
+
 fn create_apps_section() -> Option<gtk::Box> {
     let topbox = gtk::Box::new(gtk::Orientation::Vertical, 2);
     let box_collection = gtk::Box::new(gtk::Orientation::Horizontal, 10);
@@ -199,14 +212,14 @@ fn create_apps_section() -> Option<gtk::Box> {
 
     // Check first btn.
     if Path::new("/sbin/cachyos-pi").exists() {
-        let cachyos_pi = gtk::Button::with_label("CachyOS PackageInstaller");
-        cachyos_pi.connect_clicked(on_appbtn_clicked);
+        let cachyos_pi = create_gtk_button!("app-cachyos-pi-label");
+        cachyos_pi.connect_clicked(|_| spawn_cachyos_app("cachyos-pi"));
         box_collection.pack_start(&cachyos_pi, true, true, 2);
     }
     // Check second btn.
     if Path::new("/sbin/cachyos-kernel-manager").exists() {
-        let cachyos_km = gtk::Button::with_label("CachyOS Kernel Manager");
-        cachyos_km.connect_clicked(on_appbtn_clicked);
+        let cachyos_km = create_gtk_button!("app-cachyos-kernel-manager-label");
+        cachyos_km.connect_clicked(|_| spawn_cachyos_app("cachyos-kernel-manager"));
         box_collection.pack_start(&cachyos_km, true, true, 2);
     }
 
@@ -317,32 +330,5 @@ fn on_clear_pkgcache_btn_clicked(_: &gtk::Button) {
     // Spawn child process in separate thread.
     std::thread::spawn(move || {
         actions::clear_pkgcache(crate::gui::run_command);
-    });
-}
-
-fn on_appbtn_clicked(button: &gtk::Button) {
-    // Get button label.
-    let name = button.label().unwrap();
-    let binname = if name == "CachyOS PackageInstaller" {
-        "cachyos-pi"
-    } else if name == "CachyOS Kernel Manager" {
-        "cachyos-kernel-manager"
-    } else {
-        ""
-    };
-
-    // Get executable path, overwise return if it doesn't exist.
-    let exec_path = which(binname);
-    if exec_path.is_err() {
-        return;
-    }
-
-    // Spawn child process in separate thread.
-    std::thread::spawn(move || {
-        // Get executable path.
-        let exec_path = exec_path.unwrap().to_str().unwrap().to_owned();
-        let exit_status = utils::spawn_detached(&exec_path).expect("Failed to spawn process");
-
-        debug!("Exit status successfully? = {:?}", exit_status.success());
     });
 }

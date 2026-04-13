@@ -8,6 +8,14 @@ fn update_translation_apps_section(section_box: &gtk::Box) {
     for section_box_element in section_box.children() {
         if let Ok(section_label) = section_box_element.clone().downcast::<gtk::Label>() {
             section_label.set_text(&fl!("applications"));
+        } else if let Ok(hbox) = section_box_element.downcast::<gtk::Box>() {
+            for child in hbox.children() {
+                if let Ok(btn) = child.downcast::<gtk::Button>() {
+                    let id = btn.widget_name();
+                    let translated = crate::localization::get_locale_text(&id);
+                    btn.set_label(&translated);
+                }
+            }
         }
     }
 }
