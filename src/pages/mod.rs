@@ -12,7 +12,7 @@ use gtk::prelude::*;
 
 use gtk::{glib, Builder};
 use subprocess::Exec;
-use tracing::debug;
+use tracing::{debug, warn};
 use which::which;
 
 #[macro_export]
@@ -189,16 +189,16 @@ fn create_fixes_section(builder: &Builder) -> gtk::Box {
     topbox
 }
 
-fn spawn_cachyos_app(bin: &'static str) {
+fn spawn_cachyos_app(exec_path: String) {
     std::thread::spawn(move || {
-        let Ok(exec_path) = which(bin) else {
-            return;
-        };
-        let Some(exec_path) = exec_path.to_str() else {
-            return;
-        };
-        let exit_status = utils::spawn_detached(exec_path).expect("Failed to spawn process");
-        debug!("Exit status successfully? = {:?}", exit_status.success());
+        match utils::spawn_detached(&exec_path) {
+            Ok(exit_status) => {
+                debug!("Exit status successfully? = {:?}", exit_status.success());
+            }
+            Err(e) => {
+                warn!(?e, path = %exec_path, "Failed to spawn CachyOS app");
+            }
+        }
     });
 }
 
@@ -210,17 +210,22 @@ fn create_apps_section() -> Option<gtk::Box> {
     label.set_justify(gtk::Justification::Center);
     label.set_text(&fl!("applications"));
 
-    // Check first btn.
-    if Path::new("/sbin/cachyos-pi").exists() {
-        let cachyos_pi = create_gtk_button!("app-cachyos-pi-label");
-        cachyos_pi.connect_clicked(|_| spawn_cachyos_app("cachyos-pi"));
-        box_collection.pack_start(&cachyos_pi, true, true, 2);
+    // Show buttons only when the executable is on PATH (same resolution as spawn).
+    if let Ok(path) = which("cachyos-pi") {
+        if let Some(path_str) = path.to_str() {
+            let exec_path = path_str.to_owned();
+            let cachyos_pi = create_gtk_button!("app-cachyos-pi-label");
+            cachyos_pi.connect_clicked(move |_| spawn_cachyos_app(exec_path.clone()));
+            box_collection.pack_start(&cachyos_pi, true, true, 2);
+        }
     }
-    // Check second btn.
-    if Path::new("/sbin/cachyos-kernel-manager").exists() {
-        let cachyos_km = create_gtk_button!("app-cachyos-kernel-manager-label");
-        cachyos_km.connect_clicked(|_| spawn_cachyos_app("cachyos-kernel-manager"));
-        box_collection.pack_start(&cachyos_km, true, true, 2);
+    if let Ok(path) = which("cachyos-kernel-manager") {
+        if let Some(path_str) = path.to_str() {
+            let exec_path = path_str.to_owned();
+            let cachyos_km = create_gtk_button!("app-cachyos-kernel-manager-label");
+            cachyos_km.connect_clicked(move |_| spawn_cachyos_app(exec_path.clone()));
+            box_collection.pack_start(&cachyos_km, true, true, 2);
+        }
     }
 
     topbox.pack_start(&label, true, true, 5);
